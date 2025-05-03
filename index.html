@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced WebP Converter | Client-side Image Conversion Tool</title>
+    <meta name="description" content="Convert WebP images to PNG, JPG, JPEG, BMP, GIF, TIFF and more formats instantly in your browser. No server processing, no file limits.">
+    <meta name="theme-color" content="#2563eb">
+    <meta property="og:title" content="Advanced WebP Converter">
+    <meta property="og:description" content="Convert WebP to any image format instantly in your browser">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://example.com/webp-converter">
+    <meta property="og:image" content="https://example.com/preview.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --success: #10b981;
+            --error: #ef4444;
+            --cursor-size: 32px;
+            --cursor-color: var(--primary);
+        }
+
+        [data-theme="dark"] {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #8b5cf6;
+            --text: #e2e8f0;
+            --text-light: #94a3b8;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --border: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            transition: background-color 0.3s, color 0.2s, border-color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* Custom Cursor */
+        .cursor {
+            position: fixed;
+            width: var(--cursor-size);
+            height: var(--cursor-size);
+            border-radius: 50%;
+            background-color: var(--cursor-color);
+            mix-blend-mode: difference;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            opacity: 0.7;
+            transition: transform 0.15s, width 0.2s, height 0.2s, opacity 0.2s;
+        }
+
+        .cursor.hover {
+            transform: translate(-50%, -50%) scale(1.5);
+            opacity: 0.5;
+        }
+
+        .cursor.active {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.9;
+        }
+
+        .cursor-follower {
+            position: fixed;
+            width: calc(var(--cursor-size) * 2);
+            height: calc(var(--cursor-size) * 2);
+            border-radius: 50%;
+            border: 2px solid var(--cursor-color);
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: transform 0.3s ease-out, width 0.3s, height 0.3s;
+            opacity: 0.3;
+        }
+
+        /* Preloader */
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .preloader.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .preloader-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(var(--primary), 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .preloader-text {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.5s forwards;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* Header */
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background-color: var(--bg);
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: var(--text);
+            transition: background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(var(--primary), 0.1);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1.5rem;
+            padding: 2rem 0;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.2;
+            max-width: 800px;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            max-width: 600px;
+        }
+
+        /* Converter Section */
+        .converter {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .converter-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .converter-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .converter-header p {
+            color: var(--text-light);
+        }
+
+        .drop-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 3rem 2rem;
+            border-radius: 0.75rem;
+            border: 2px dashed var(--border);
+            background-color: rgba(var(--primary), 0.03);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-area:hover {
+            border-color: var(--primary);
+            background-color: rgba(var(--primary), 0.05);
+        }
+
+        .drop-area.active {
+            border-color: var(--primary);
+            background-color: rgba(var(--primary), 0.1);
+        }
+
+        .drop-area.invalid {
+            border-color: var(--error);
+            background-color: rgba(var(--error), 0.05);
+        }
+
+        .drop-area-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(var(--primary), 0.1);
+            color: var(--primary);
+            border-radius: 50%;
+            font-size: 1.5rem;
+        }
+
+        .drop-area-text {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .drop-area-text h3 {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .drop-area-text p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .browse-btn {
+            padding: 0.5rem 1.25rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .browse-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .browse-btn:active {
+            transform: translateY(0);
+        }
+
+        .file-info {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 1rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-details {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .file-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 0.5rem;
+            object-fit: cover;
+            border: 1px solid var(--border);
+        }
+
+        .file-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+        }
+
+        .file-size {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: var(--error);
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .remove-file:hover {
+            background-color: rgba(var(--error), 0.1);
+        }
+
+        .conversion-options {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .conversion-options.show {
+            display: flex;
+        }
+
+        .format-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .format-selector label {
+            font-weight: 500;
+        }
+
+        .format-dropdown {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            background-color: var(--card-bg);
+            color: var(--text);
+            font-size: 1rem;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+        }
+
+        .format-dropdown:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(var(--primary), 0.2);
+        }
+
+        .quality-slider {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .quality-slider label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quality-value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--border);
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 4px rgba(var(--primary), 0.2);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--primary), 0.2);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(var(--primary), 0.05);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        /* Result Section */
+        .result-section {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .result-section.show {
+            display: flex;
+        }
+
+        .result-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .result-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .result-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .result-meta p {
+            color: var(--text-light);
+        }
+
+        /* Features Section */
+        .features {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .features-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .features-header h2 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .features-header p {
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(var(--primary), 0.1);
+            color: var(--primary);
+            border-radius: 0.75rem;
+            font-size: 1.5rem;
+        }
+
+        .feature-content h3 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-content p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        /* Settings Section */
+        .settings {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .settings-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .settings-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .settings-tab.active {
+            color: var(--primary);
+            background-color: rgba(var(--primary), 0.1);
+        }
+
+        .settings-tab:hover:not(.active) {
+            background-color: rgba(var(--primary), 0.05);
+            color: var(--text);
+        }
+
+        .settings-content {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .settings-content.show {
+            display: flex;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-item label {
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .cursor-settings {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .cursor-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .cursor-preview-inner {
+            width: var(--cursor-size);
+            height: var(--cursor-size);
+            border-radius: 50%;
+            background-color: var(--cursor-color);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .cursor-preview-follower {
+            width: calc(var(--cursor-size) * 2);
+            height: calc(var(--cursor-size) * 2);
+            border-radius: 50%;
+            border: 2px solid var(--cursor-color);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.3;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .footer-column h3 {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .footer-link {
+            color: var(--text-light);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+            color: var(--primary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(var(--primary), 0.1);
+            color: var(--primary);
+            border-radius: 50%;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .social-link:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .footer-bottom {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-bottom p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        /* Scroll to top button */
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 90;
+            border: none;
+        }
+
+        .scroll-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .scroll-top:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .converter {
+                padding: 1.5rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .file-details {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .result-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Custom Cursor Elements -->
+    <div class="cursor"></div>
+    <div class="cursor-follower"></div>
+
+    <!-- Preloader -->
+    <div class="preloader">
+        <div class="preloader-spinner"></div>
+        <div class="preloader-text">Loading WebP Converter...</div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <a href="#" class="logo">
+            <span class="logo-icon">W</span>
+            <span>WebP Converter</span>
+        </a>
+        <div class="nav-links">
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="theme-icon">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <path d="M12 1v2"></path>
+                    <path d="M12 21v2"></path>
+                    <path d="M4.22 4.22l1.42 1.42"></path>
+                    <path d="M18.36 18.36l1.42 1.42"></path>
+                    <path d="M1 12h2"></path>
+                    <path d="M21 12h2"></path>
+                    <path d="M4.22 19.78l1.42-1.42"></path>
+                    <path d="M18.36 5.64l1.42-1.42"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Convert WebP Images to Any Format Instantly</h1>
+            <p>Free, unlimited conversions right in your browser. No uploads, no server processing - your images never leave your device.</p>
+        </section>
+
+        <!-- Converter Section -->
+        <section class="converter">
+            <div class="converter-header">
+                <h2>WebP Converter</h2>
+                <p>Drag & drop your WebP image or click to browse files</p>
+            </div>
+
+            <div class="drop-area" id="dropArea">
+                <div class="drop-area-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <div class="drop-area-text">
+                    <h3>Drop your WebP file here</h3>
+                    <p>or click to select a file from your device</p>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".webp,image/webp">
+                <button class="browse-btn" id="browseBtn">Browse Files</button>
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <div class="file-details">
+                    <img id="filePreview" class="file-preview" src="" alt="Preview">
+                    <div class="file-meta">
+                        <div class="file-name" id="fileName"></div>
+                        <div class="file-size" id="fileSize"></div>
+                    </div>
+                    <button class="remove-file" id="removeFile" aria-label="Remove file">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="conversion-options" id="conversionOptions">
+                <div class="format-selector">
+                    <label for="formatSelect">Output Format</label>
+                    <select id="formatSelect" class="format-dropdown">
+                        <option value="png">PNG (Lossless)</option>
+                        <option value="jpeg" selected>JPEG (High Quality)</option>
+                        <option value="jpg">JPG (Standard Quality)</option>
+                        <option value="bmp">BMP (Uncompressed)</option>
+                        <option value="gif">GIF (Animated)</option>
+                        <option value="tiff">TIFF (High Quality)</option>
+                        <option value="ico">ICO (Icon)</option>
+                    </select>
+                </div>
+
+                <div class="quality-slider" id="qualitySlider">
+                    <label>
+                        <span>Quality: <span class="quality-value" id="qualityValue">90</span>%</span>
+                    </label>
+                    <input type="range" min="1" max="100" value="90" class="slider" id="qualityRange">
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="convertBtn">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </span>
+                        Convert & Download
+                    </button>
+                    <button class="btn btn-secondary" id="copyBtn">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </span>
+                        Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="result-preview">
+                    <img id="resultImage" class="result-image" src="" alt="Converted result">
+                    <div class="result-meta">
+                        <h3 id="resultFormat"></h3>
+                        <p id="resultSize"></p>
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn btn-primary" id="downloadResultBtn">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </span>
+                        Download Again
+                    </button>
+                    <button class="btn btn-secondary" id="newConversionBtn">
+                        <span class="btn-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                        </span>
+                        New Conversion
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features">
+            <div class="features-header">
+                <h2>Why Use Our WebP Converter?</h2>
+                <p>Experience the best client-side image conversion with these powerful features</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                    <div class="feature-content">
+                        <h3>100% Private</h3>
+                        <p>Your images never leave your device. All processing happens in your browser with no server uploads.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </div>
+                    <div class="feature-content">
+                        <h3>No Limits</h3>
+                        <p>Convert as many images as you want with no file size restrictions or watermarks.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Instant Conversion</h3>
+                        <p>Get your converted images in seconds with our optimized browser-based processing.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Multiple Formats</h3>
+                        <p>Convert to PNG, JPG, JPEG, BMP, GIF, TIFF, ICO and more with quality controls.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Modern Interface</h3>
+                        <p>Enjoy a beautiful, responsive design with dark mode and customizable settings.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="feature-content">
+                        <h3>No Installation</h3>
+                        <p>Works in any modern browser with no plugins or software to install.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section class="settings">
+            <div class="settings-header">
+                <h2>Settings</h2>
+            </div>
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="appearance">Appearance</button>
+                <button class="settings-tab" data-tab="cursor">Cursor</button>
+            </div>
+            <div class="settings-content show" id="appearanceSettings">
+                <div class="setting-group">
+                    <h3>Theme</h3>
+                    <div class="setting-item">
+                        <label for="themeSelect">Color Scheme</label>
+                        <select id="themeSelect" class="format-dropdown">
+                            <option value="auto">Auto (System)</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="primaryColor">Primary Color</label>
+                        <input type="color" id="primaryColor" value="#2563eb">
+                    </div>
+                </div>
+            </div>
+            <div class="settings-content" id="cursorSettings">
+                <div class="setting-group">
+                    <h3>Custom Cursor</h3>
+                    <div class="setting-item">
+                        <label for="cursorToggle">Enable Custom Cursor</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="cursorToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="cursor-settings">
+                        <div class="setting-item">
+                            <label for="cursorSize">Cursor Size</label>
+                            <input type="range" min="16" max="48" value="32" class="slider" id="cursorSize">
+                        </div>
+                        <div class="setting-item">
+                            <label for="cursorColor">Cursor Color</label>
+                            <input type="color" id="cursorColor" value="#2563eb">
+                        </div>
+                    </div>
+                    <div class="cursor-preview">
+                        <div class="cursor-preview-inner"></div>
+                        <div class="cursor-preview-follower"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-top">
+                <div class="footer-column">
+                    <h3>WebP Converter</h3>
+                    <p>Free, unlimited WebP to image conversions right in your browser.</p>
+                </div>
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <div class="footer-links">
+                        <a href="#" class="footer-link">Home</a>
+                        <a href="#" class="footer-link">Features</a>
+                        <a href="#" class="footer-link">Settings</a>
+                        <a href="#" class="footer-link">Privacy Policy</a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>Supported Formats</h3>
+                    <div class="footer-links">
+                        <a href="#" class="footer-link">WebP to PNG</a>
+                        <a href="#" class="footer-link">WebP to JPG</a>
+                        <a href="#" class="footer-link">WebP to BMP</a>
+                        <a href="#" class="footer-link">WebP to GIF</a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>Connect</h3>
+                    <div class="social-links">
+                        <a href="https://github.com/Gurwindersgwd" class="social-link" aria-label="GitHub">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                            </svg>
+                        </a>
+                        <a href="https://x.com/GurwinderS82971" class="social-link" aria-label="Twitter">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
+                            </svg>
+                        </a>
+                        <a href="https://www.linkedin.com/in/gurwinder-singh-gangad-8ba93a359/" class="social-link" aria-label="LinkedIn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                                <rect x="2" y="9" width="4" height="12"></rect>
+                                <circle cx="4" cy="4" r="2"></circle>
+                            </svg>
+                        </a>
+                        <a href="mailto:gsgangad.webdesigner@gmail.com" class="social-link" aria-label="Email">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2023 WebP Converter. All rights reserved.</p>
+                <p>Made with ❤️ for the web</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to top button -->
+    <button class="scroll-top" id="scrollTop" aria-label="Scroll to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 15l-6-6-6 6"></path>
+        </svg>
+    </button>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', () => {
+            const preloader = document.querySelector('.preloader');
+            setTimeout(() => {
+                preloader.classList.add('hide');
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 500);
+            }, 1000);
+        });
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeSelect = document.getElementById('themeSelect');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or use system preference
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        themeSelect.value = savedTheme;
+
+        const applyTheme = (theme) => {
+            if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            }
+        };
+
+        // Initial theme application
+        applyTheme(savedTheme);
+
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+                themeSelect.value = 'light';
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                themeSelect.value = 'dark';
+            }
+        });
+
+        // Change theme via select
+        themeSelect.addEventListener('change', (e) => {
+            const selectedTheme = e.target.value;
+            localStorage.setItem('theme', selectedTheme);
+            applyTheme(selectedTheme);
+        });
+
+        // Watch for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (themeSelect.value === 'auto') {
+                applyTheme('auto');
+            }
+        });
+
+        // Custom Cursor
+        const cursor = document.querySelector('.cursor');
+        const cursorFollower = document.querySelector('.cursor-follower');
+        let mouseX = 0, mouseY = 0;
+        let posX = 0, posY = 0;
+        const cursorToggle = document.getElementById('cursorToggle');
+        const cursorSizeInput = document.getElementById('cursorSize');
+        const cursorColorInput = document.getElementById('cursorColor');
+
+        // Check for saved cursor preferences
+        const cursorEnabled = localStorage.getItem('cursorEnabled') !== 'false';
+        const savedCursorSize = localStorage.getItem('cursorSize') || '32';
+        const savedCursorColor = localStorage.getItem('cursorColor') || '#2563eb';
+
+        cursorToggle.checked = cursorEnabled;
+        cursorSizeInput.value = savedCursorSize;
+        cursorColorInput.value = savedCursorColor;
+
+        // Apply saved cursor settings
+        const applyCursorSettings = () => {
+            const enabled = cursorToggle.checked;
+            const size = cursorSizeInput.value;
+            const color = cursorColorInput.value;
+
+            if (enabled) {
+                cursor.style.display = 'block';
+                cursorFollower.style.display = 'block';
+                document.body.style.cursor = 'none';
+            } else {
+                cursor.style.display = 'none';
+                cursorFollower.style.display = 'none';
+                document.body.style.cursor = 'auto';
+            }
+
+            document.documentElement.style.setProperty('--cursor-size', `${size}px`);
+            document.documentElement.style.setProperty('--cursor-color', color);
+
+            // Update preview
+            document.querySelector('.cursor-preview-inner').style.width = `${size}px`;
+            document.querySelector('.cursor-preview-inner').style.height = `${size}px`;
+            document.querySelector('.cursor-preview-inner').style.backgroundColor = color;
+            document.querySelector('.cursor-preview-follower').style.width = `${size * 2}px`;
+            document.querySelector('.cursor-preview-follower').style.height = `${size * 2}px`;
+            document.querySelector('.cursor-preview-follower').style.borderColor = color;
+
+            // Save to localStorage
+            localStorage.setItem('cursorEnabled', enabled);
+            localStorage.setItem('cursorSize', size);
+            localStorage.setItem('cursorColor', color);
+        };
+
+        // Initial application
+        applyCursorSettings();
+
+        // Event listeners for cursor settings
+        cursorToggle.addEventListener('change', applyCursorSettings);
+        cursorSizeInput.addEventListener('input', applyCursorSettings);
+        cursorColorInput.addEventListener('input', applyCursorSettings);
+
+        // Cursor movement
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        const updateCursorPosition = () => {
+            // Smooth movement for follower
+            posX += (mouseX - posX) / 6;
+            posY += (mouseY - posY) / 6;
+
+            cursor.style.left = `${mouseX}px`;
+            cursor.style.top = `${mouseY}px`;
+            cursorFollower.style.left = `${posX}px`;
+            cursorFollower.style.top = `${posY}px`;
+
+            requestAnimationFrame(updateCursorPosition);
+        };
+
+        updateCursorPosition();
+
+        // Cursor hover effects
+        const hoverElements = ['button', 'a', 'input', 'select', '.drop-area'];
+        hoverElements.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursor.classList.add('hover');
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursor.classList.remove('hover');
+                });
+            });
+        });
+
+        // Cursor click effect
+        document.addEventListener('mousedown', () => {
+            cursor.classList.add('active');
+        });
+        document.addEventListener('mouseup', () => {
+            cursor.classList.remove('active');
+        });
+
+        // Ripple effect for buttons
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Remove any existing ripples
+                const existingRipples = this.querySelectorAll('.ripple');
+                existingRipples.forEach(ripple => ripple.remove());
+
+                // Create ripple
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                
+                // Position ripple
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = `${size}px`;
+                ripple.style.height = `${size}px`;
+                ripple.style.left = `${e.clientX - rect.left - size/2}px`;
+                ripple.style.top = `${e.clientY - rect.top - size/2}px`;
+                
+                this.appendChild(ripple);
+                
+                // Remove ripple after animation
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Scroll to top button
+        const scrollTopBtn = document.getElementById('scrollTop');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                scrollTopBtn.classList.add('show');
+            } else {
+                scrollTopBtn.classList.remove('show');
+            }
+        });
+
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Settings tabs
+        const settingsTabs = document.querySelectorAll('.settings-tab');
+        settingsTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs
+                settingsTabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                
+                // Hide all content
+                document.querySelectorAll('.settings-content').forEach(content => {
+                    content.classList.remove('show');
+                });
+                // Show corresponding content
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(`${tabId}Settings`).classList.add('show');
+            });
+        });
+
+        // Primary color picker
+        const primaryColorInput = document.getElementById('primaryColor');
+        const savedPrimaryColor = localStorage.getItem('primaryColor') || '#2563eb';
+        primaryColorInput.value = savedPrimaryColor;
+
+        primaryColorInput.addEventListener('input', (e) => {
+            const color = e.target.value;
+            document.documentElement.style.setProperty('--primary', color);
+            document.documentElement.style.setProperty('--primary-dark', `${color}cc`);
+            localStorage.setItem('primaryColor', color);
+        });
+
+        // Apply saved primary color
+        document.documentElement.style.setProperty('--primary', savedPrimaryColor);
+        document.documentElement.style.setProperty('--primary-dark', `${savedPrimaryColor}cc`);
+
+        // File conversion functionality
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const filePreview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFile = document.getElementById('removeFile');
+        const conversionOptions = document.getElementById('conversionOptions');
+        const formatSelect = document.getElementById('formatSelect');
+        const qualityRange = document.getElementById('qualityRange');
+        const qualityValue = document.getElementById('qualityValue');
+        const convertBtn = document.getElementById('convertBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const resultSection = document.getElementById('resultSection');
+        const resultImage = document.getElementById('resultImage');
+        const resultFormat = document.getElementById('resultFormat');
+        const resultSize = document.getElementById('resultSize');
+        const downloadResultBtn = document.getElementById('downloadResultBtn');
+        const newConversionBtn = document.getElementById('newConversionBtn');
+
+        let currentFile = null;
+
+        // Update quality value display
+        qualityRange.addEventListener('input', () => {
+            qualityValue.textContent = qualityRange.value;
+        });
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop area when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('active');
+        }
+
+        function unhighlight() {
+            dropArea.classList.remove('active');
+        }
+
+        // Handle dropped files
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        // Handle file selection via browse button
+        browseBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFiles(fileInput.files);
+            }
+        });
+
+        // Remove file
+        removeFile.addEventListener('click', () => {
+            resetFileInput();
+        });
+
+        function resetFileInput() {
+            currentFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            conversionOptions.classList.remove('show');
+            resultSection.classList.remove('show');
+            dropArea.classList.remove('invalid');
+        }
+
+        // Handle the selected files
+        function handleFiles(files) {
+            const file = files[0];
+            
+            // Check if file is WebP
+            if (!file.type.match('image/webp') && !file.name.toLowerCase().endsWith('.webp')) {
+                dropArea.classList.add('invalid');
+                dropArea.querySelector('.drop-area-text h3').textContent = 'Invalid File Type';
+                dropArea.querySelector('.drop-area-text p').textContent = 'Please upload a WebP image file';
+                return;
+            }
+            
+            dropArea.classList.remove('invalid');
+            currentFile = file;
+            
+            // Display file info
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                filePreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            // Show file info and conversion options
+            fileInfo.classList.add('show');
+            conversionOptions.classList.add('show');
+            resultSection.classList.remove('show');
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Convert image
+        convertBtn.addEventListener('click', convertImage);
+        downloadResultBtn.addEventListener('click', convertImage);
+
+        async function convertImage() {
+            if (!currentFile) return;
+            
+            const format = formatSelect.value;
+            const quality = parseInt(qualityRange.value) / 100;
+            
+            try {
+                // Load the image
+                const img = new Image();
+                const imgUrl = URL.createObjectURL(currentFile);
+                
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = imgUrl;
+                });
+                
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert to selected format
+                let mimeType;
+                let fileExtension;
+                
+                switch (format) {
+                    case 'png':
+                        mimeType = 'image/png';
+                        fileExtension = 'png';
+                        break;
+                    case 'jpeg':
+                    case 'jpg':
+                        mimeType = 'image/jpeg';
+                        fileExtension = 'jpg';
+                        break;
+                    case 'bmp':
+                        mimeType = 'image/bmp';
+                        fileExtension = 'bmp';
+                        break;
+                    case 'gif':
+                        mimeType = 'image/gif';
+                        fileExtension = 'gif';
+                        break;
+                    case 'tiff':
+                        mimeType = 'image/tiff';
+                        fileExtension = 'tiff';
+                        break;
+                    case 'ico':
+                        mimeType = 'image/x-icon';
+                        fileExtension = 'ico';
+                        break;
+                    default:
+                        mimeType = 'image/png';
+                        fileExtension = 'png';
+                }
+                
+                // Convert canvas to blob
+                let blob;
+                if (mimeType === 'image/jpeg' || mimeType === 'image/webp') {
+                    blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, quality));
+                } else {
+                    blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType));
+                }
+                
+                // Create object URL for the converted image
+                const convertedUrl = URL.createObjectURL(blob);
+                
+                // Display result
+                resultImage.src = convertedUrl;
+                resultFormat.textContent = `${format.toUpperCase()} Image`;
+                resultSize.textContent = formatFileSize(blob.size);
+                
+                // Set up download
+                downloadResultBtn.onclick = () => {
+                    downloadImage(convertedUrl, `${currentFile.name.split('.')[0]}.${fileExtension}`);
+                };
+                
+                // Set up copy to clipboard
+                copyBtn.onclick = () => {
+                    copyToClipboard(blob);
+                };
+                
+                // Show result section
+                resultSection.classList.add('show');
+                
+                // Clean up
+                URL.revokeObjectURL(imgUrl);
+            } catch (error) {
+                console.error('Conversion error:', error);
+                alert('Error converting image. Please try again.');
+            }
+        }
+
+        // Download image
+        function downloadImage(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Copy to clipboard
+        async function copyToClipboard(blob) {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        [blob.type]: blob
+                    })
+                ]);
+                alert('Image copied to clipboard!');
+            } catch (error) {
+                console.error('Clipboard write failed:', error);
+                alert('Failed to copy image to clipboard. Your browser may not support this feature.');
+            }
+        }
+
+        // New conversion
+        newConversionBtn.addEventListener('click', resetFileInput);
+
+        // Initialize with any saved settings
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if there's a saved theme preference
+            const savedTheme = localStorage.getItem('theme') || 'auto';
+            themeSelect.value = savedTheme;
+            applyTheme(savedTheme);
+            
+            // Check for saved cursor settings
+            applyCursorSettings();
+            
+            // Apply saved primary color
+            const savedColor = localStorage.getItem('primaryColor') || '#2563eb';
+            document.documentElement.style.setProperty('--primary', savedColor);
+            document.documentElement.style.setProperty('--primary-dark', `${savedColor}cc`);
+            primaryColorInput.value = savedColor;
+        });
+    </script>
+</body>
+</html>
